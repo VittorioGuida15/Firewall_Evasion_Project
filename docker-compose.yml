@@ -1,0 +1,27 @@
+# Nodo bersaglio (Firewall)
+services:
+  target_server:
+    image: nginx:latest  # un server web leggero
+    container_name: target_server
+    cap_add:
+      - NET_ADMIN # Per usare regole firewall
+    networks:
+      - lab_network
+
+  # Nodo attaccante
+  attacker_client:
+    image: python:3.10
+    container_name: attacker_client
+    cap_add: 
+      - NET_ADMIN # Necessario per la generazione di pacchetti grezzi
+    volumes:
+      - .:/app # collegamento cartella VSC con il container
+    working_dir: /app
+    command: tail -f /dev/null # Mantenere container in background
+    networks:
+      - lab_network
+
+# La rete
+networks:
+  lab_network:
+    driver: bridge # ponte virtuale con la rete del PC
