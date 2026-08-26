@@ -1,0 +1,10 @@
+FROM nginx:latest
+
+# Install iptables for firewall rules
+RUN apt-get update && \
+    apt-get install -y iptables iproute2 tcpdump && \
+    rm -rf /var/lib/apt/lists/*
+
+# Add a script to apply iptables rules and then start nginx
+COPY setup_defense.sh /docker-entrypoint.d/99-setup-defense.sh
+RUN chmod +x /docker-entrypoint.d/99-setup-defense.sh

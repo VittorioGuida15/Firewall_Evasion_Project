@@ -1,7 +1,9 @@
 # Nodo bersaglio (Firewall)
 services:
   target_server:
-    image: nginx:latest  # un server web leggero
+    build:
+      context: .
+      dockerfile: Dockerfile.target
     container_name: target_server
     cap_add:
       - NET_ADMIN # Per usare regole firewall
