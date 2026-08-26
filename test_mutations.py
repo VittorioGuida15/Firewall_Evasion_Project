@@ -7,7 +7,7 @@ packet.show()
 
 print("Mutazione")
 packet = mutate_ip_ttl(packet, 111)
-packet = mutate_tcp_flags(packet, "FPU") 
+packet = mutate_tcp_flags(packet, "FPU") # XMAS Packet
 packet = mutate_source_port(packet, 53)  # Mascherato come traffico DNS in uscita
 packet.show()
 
