@@ -5,7 +5,6 @@ RUN apt-get update && \
     apt-get install -y iptables iproute2 tcpdump && \
     rm -rf /var/lib/apt/lists/*
 
-#Script per applicare le regola all'avvio di nginx
-RUN apt-get update && \
-    apt-get install -y iptables iproute2 tcpdump && \
-    rm -rf /var/lib/apt/lists/*
+# Copia e rendi eseguibile lo script per applicare le regole
+COPY setup_defense.sh /docker-entrypoint.d/99-setup-defense.sh
+RUN chmod +x /docker-entrypoint.d/99-setup-defense.sh

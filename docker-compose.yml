@@ -5,6 +5,10 @@ services:
       context: .
       dockerfile: Dockerfile.target
     container_name: target_server
+    cap_add:
+      - NET_ADMIN # Per usare regole firewall
+    networks:
+      - lab_network
 
   # Nodo attaccante
   attacker_client:
