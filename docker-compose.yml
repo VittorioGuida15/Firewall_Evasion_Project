@@ -2,7 +2,7 @@
 services:
   target_server:
     build: 
-      context: .
+      context: ./docker/target
       dockerfile: Dockerfile.target
     container_name: target_server
     cap_add:

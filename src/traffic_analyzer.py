@@ -51,6 +51,5 @@ def analyze_traffic_baseline(duration=10):
     print("------------------------\n")
 
 if __name__ == "__main__":
-    send_standard_http_request()
     analyze_traffic_baseline(duration=5)
 
