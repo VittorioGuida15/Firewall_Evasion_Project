@@ -1,0 +1,22 @@
+[
+    {
+        "timestamp": 1788105130.7932281,
+        "packet_type": "XMAS_base",
+        "score": -1
+    },
+    {
+        "timestamp": 1788105133.8292124,
+        "packet_type": "SYN_mutation",
+        "score": -1
+    },
+    {
+        "timestamp": 1788105621.7613194,
+        "packet_type": "XMAS_base",
+        "score": -1
+    },
+    {
+        "timestamp": 1788105624.7969813,
+        "packet_type": "SYN_mutation",
+        "score": -1
+    }
+]

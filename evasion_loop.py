@@ -1,6 +1,29 @@
 import time
+import json
+import os
 from scapy.all import IP, TCP, sr1
-from mutation_engine import mutate_tcp_flags, mutate_ip_ttl, mutate_source_port
+from mutation_engine import mutate_tcp_flags
+
+def log_evasion_attempt(packet_type, score):
+    log_entry = {
+        "timestamp": time.time(),
+        "packet_type": packet_type,
+        "score": score
+    }
+
+    logs = []
+    if os.path.exists("evasion_log.json"):
+        with open("evasion_log.json", "r") as f:
+            try:
+                logs = json.load(f)
+            except json.JSONDecodeError:
+                # If file exists but is empty or invalid, start fresh
+                logs = []
+
+    logs.append(log_entry)
+
+    with open("evasion_log.json", "w") as f:
+        json.dump(logs, f, indent=4)
 
 def run_evasion_loop():
     print("--- Inizio Evasion Loop (Orchestratore) ---")
@@ -15,6 +38,7 @@ def run_evasion_loop():
     response = sr1(packet, timeout=3, verbose=0)
 
     score = evaluate_response(response)
+    log_evasion_attempt("XMAS_base", score)
 
     if score == -1:
         print("\n[Fase 2] Il pacchetto è stato bloccato. Applicazione mutazione (Cambio Flag TCP a SYN)...")
@@ -24,6 +48,7 @@ def run_evasion_loop():
         print("Ritento l'invio con il pacchetto mutato...")
         response2 = sr1(mutated_packet, timeout=3, verbose=0)
         score2 = evaluate_response(response2)
+        log_evasion_attempt("SYN_mutation", score2)
 
         if score2 == 1:
              print("\n[SUCCESSO] La mutazione ha bypassato il firewall! (Score: +1)")
