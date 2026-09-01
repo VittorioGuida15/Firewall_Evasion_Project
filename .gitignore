@@ -12,3 +12,7 @@ __pycache__/
 
 # File temporanei
 *.log
+
+# Data Stores locali (JSON)
+baseline.json
+evasion_log.json
