@@ -10,9 +10,11 @@ services:
     networks:
       - lab_network
 
-  # Nodo attaccante
+# Nodo attaccante
   attacker_client:
-    image: python:3.10
+    build: 
+      context: .
+      dockerfile: ./docker/attacker/Dockerfile.attacker
     container_name: attacker_client
     cap_add: 
       - NET_ADMIN # Necessario per la generazione di pacchetti grezzi

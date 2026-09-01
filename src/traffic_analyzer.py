@@ -51,5 +51,6 @@ def analyze_traffic_baseline(duration=10):
     print("------------------------\n")
 
 if __name__ == "__main__":
-    analyze_traffic_baseline(duration=5)
+    print("In attesa di traffico...")
+    analyze_traffic_baseline(duration=20)
 
