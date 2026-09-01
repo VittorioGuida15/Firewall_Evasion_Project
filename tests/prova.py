@@ -1,50 +1,77 @@
 import time
-from collections import Counter
-from scapy.all import IP, TCP, sr1, sniff
+import json
+import os
+from scapy.all import IP, TCP, sr1
+from mutation_engine import mutate_tcp_flags
 
-def send_standard_http_request():
-    """Invia una richiesta HTTP standard per simulare traffico normale."""
-    ip_layer = IP(dst="target_server")
-    tcp_layer = TCP(dport=80, flags="S")
-    packet = ip_layer / tcp_layer
-    print("Invio richiesta baseline...")
-    response = sr1(packet, timeout=2, verbose=0)
-    return response
-
-def analyze_traffic_baseline(duration=10):
-    """Cattura il traffico per un tempo determinato e ne analizza le statistiche di base."""
-    print(f"Cattura traffico per {duration} secondi per stabilire la baseline...")
-    packets = sniff(filter="tcp and port 80", timeout=duration)
+def log_evasion_attempt(packet_type, score):
+    log_entry = {
+        "timestamp": time.time(),
+        "packet_type": packet_type,
+        "score": score
+    }
     
-    if not packets:
-        print("Nessun pacchetto catturato. Assicurati che target_server sia raggiungibile.")
-        return
+    logs = []
+    if os.path.exists("evasion_log.json"):
+        with open("evasion_log.json", "r") as f:
+            try:
+                logs = json.load(f)
+            except json.JSONDecodeError:
+                # If file exists but is empty or invalid, start fresh
+                logs = []
+            
+    logs.append(log_entry)
+    
+    with open("evasion_log.json", "w") as f:
+        json.dump(logs, f, indent=4)
 
-    packet_sizes = []
-    ttl_values = []
-    tcp_flags_counter = Counter()
+def run_evasion_loop():
+    print("--- Inizio Evasion Loop (Orchestratore) ---")
+    
+    # Pacchetto Base Malevolo (verrà bloccato)
+    # È un pacchetto XMAS (FIN, PSH, URG)
+    ip_layer = IP(dst="target_server")
+    tcp_layer = TCP(dport=80, flags="FPU") 
+    packet = ip_layer / tcp_layer
+    
+    print("\n[Fase 1] Invio pacchetto base malevolo (XMAS) senza mutazioni...")
+    response = sr1(packet, timeout=3, verbose=0)
+    
+    score = evaluate_response(response)
+    log_evasion_attempt("XMAS_base", score)
+    
+    if score == -1:
+        print("\n[Fase 2] Il pacchetto è stato bloccato. Applicazione mutazione (Cambio Flag TCP a SYN)...")
+        # Mutiamo il pacchetto togliendo i flag anomali
+        mutated_packet = mutate_tcp_flags(packet, "S")
+        
+        print("Ritento l'invio con il pacchetto mutato...")
+        response2 = sr1(mutated_packet, timeout=3, verbose=0)
+        score2 = evaluate_response(response2)
+        log_evasion_attempt("SYN_mutation", score2)
+        
+        if score2 == 1:
+             print("\n[SUCCESSO] La mutazione ha bypassato il firewall! (Score: +1)")
+        else:
+             print("\n[FALLIMENTO] Anche la mutazione è stata bloccata. (Score: -1)")
+             
+    elif score == 1:
+        print("\n[ATTENZIONE] Il pacchetto base non è stato bloccato. Controlla le regole del firewall.")
 
-    for pkt in packets:
-        if pkt.haslayer(IP) and pkt.haslayer(TCP):
-            packet_sizes.append(len(pkt))
-            ttl_values.append(pkt[IP].ttl)
-            # Converte il valore flag in stringa leggibile
-            flags = pkt.sprintf('%TCP.flags%')
-            tcp_flags_counter[flags] += 1
-
-    avg_size = sum(packet_sizes) / len(packet_sizes) if packet_sizes else 0
-    avg_ttl = sum(ttl_values) / len(ttl_values) if ttl_values else 0
-
-    print("\n--- Baseline Profile ---")
-    print(f"Pacchetti analizzati: {len(packets)}")
-    print(f"Dimensione media pacchetto: {avg_size:.2f} bytes")
-    print(f"TTL medio: {avg_ttl:.2f}")
-    print("Distribuzione Flag TCP:")
-    for flag, count in tcp_flags_counter.items():
-         print(f"  {flag}: {count}")
-    print("------------------------\n")
+def evaluate_response(response):
+    """Valuta la risposta del firewall/server e restituisce un punteggio."""
+    if response is None:
+        print("-> Esito: Nessuna risposta (probabilmente scartato - DROP). Score: -1")
+        return -1
+    elif response.haslayer(TCP):
+        if response[TCP].flags == "SA": # SYN-ACK
+            print("-> Esito: Risposta SYN-ACK (Connessione accettata). Score: +1")
+            return 1
+        elif response[TCP].flags in ["R", "RA"]: # RST
+            print("-> Esito: Connessione rifiutata attivamente (RST). Score: -1")
+            return -1
+    print("-> Esito: Risposta anomala o non gestita. Score: -1")
+    return -1
 
 if __name__ == "__main__":
-    # Invia qualche richiesta per generare traffico se non c'è nulla in esecuzione
-    send_standard_http_request()
-    analyze_traffic_baseline(duration=5)
+    run_evasion_loop()

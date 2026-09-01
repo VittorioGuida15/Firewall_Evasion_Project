@@ -1,17 +1,9 @@
 import time
+import json
 from collections import Counter
 from scapy.all import IP, TCP, sr1, sniff
 
-def send_standard_http_request():
-    """Invia una richiesta HTTP standard per simulare traffico normale """
-    ip_layer = IP(dst="target_server")
-    tcp_layer = TCP(dport=80, flags="S")
-    packet = ip_layer / tcp_layer
-    print("Invio richiesta baseline...")
-    response = sr1(packet, timeout=2, verbose=0)
-    return response
-
-def analyze_traffic_baseline(duration=10):
+def analyze_traffic_baseline(duration=20):
     """Cattura il traffico per un tempo determinato e ne analizza le statistiche di base facendone la media."""
     print(f"cattura il traffico per {duration} secondi")
     packets = sniff(filter="tcp and port 80", timeout=duration)
@@ -40,6 +32,17 @@ def analyze_traffic_baseline(duration=10):
     if ttl_values:
         avg_ttl = sum(ttl_values) / len(ttl_values)
 
+    #Organizzazione dei dati
+    baseline_data = {
+            "avg_packet_size": round(avg_size, 2),
+            "avg_ttl": round(avg_ttl, 2),
+            "tcp_flags_distribution": dict(tcp_flags_counter)
+    }
+
+    #Salvataggio dati in file JSON
+    with open("baseline.json", "w") as f:
+            json.dump(baseline_data, f, indent=4) #indent: indentazione file JSON
+
 
     print("\n Profilo Baseine")
     print(f"Pacchetti analizzati: {len(packets)}")
@@ -49,6 +52,7 @@ def analyze_traffic_baseline(duration=10):
     for flags, count in tcp_flags_counter.items():
         print(f" {flags}: {count}")
     print("------------------------\n")
+    print("Profilo Baseline salvato in baseline.json")
 
 if __name__ == "__main__":
     print("In attesa di traffico...")
