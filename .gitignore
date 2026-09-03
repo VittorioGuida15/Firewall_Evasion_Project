@@ -16,3 +16,6 @@ __pycache__/
 # Data Stores locali (JSON)
 baseline.json
 evasion_log.json
+
+# API key
+.env

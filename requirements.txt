@@ -1,1 +1,3 @@
 scapy
+google-generativeai
+python-dotenv
