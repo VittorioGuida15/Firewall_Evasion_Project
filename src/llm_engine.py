@@ -10,8 +10,8 @@ API_KEY = os.getenv("GEMINI_API_KEY")
 if not API_KEY:
     raise ValueError("ERRORE CRITICO: GEMINI_API_KEY non trovata.")
 
-#Configura libreria Google con API_KEY
-genai.configure(api_key=API_KEY)
+#Configura client Google Gemini
+client = genai.Client(api_key=API_KEY)
 
 def get_evasion_strategy(baseline_path="baseline.json", log_path="evasion_log.json"):
     """LLM Evasion Strategy Engine: Interroga Gemini per estrarre la strategia di evasione firewall"""
@@ -29,7 +29,7 @@ def get_evasion_strategy(baseline_path="baseline.json", log_path="evasion_log.js
     except FileExistsError:
         evasion_log= [{"info": "Nessun log precedente. È il primo tentativo."}]
 
-#Creazione del prompt
+    #Creazione del prompt
     prompt = f"""
     Sei un esperto di cybersecurity e il 'Cervello' di un sistema automatizzato di Evasione Firewall.
     Il tuo compito è analizzare il traffico di base della rete e la cronologia dei tentativi falliti/riusciti, per suggerire la prossima mutazione.
@@ -41,20 +41,22 @@ def get_evasion_strategy(baseline_path="baseline.json", log_path="evasion_log.js
     {json.dumps(evasion_log, indent=2)}
 
     Attualmente il nostro motore Python può modificare i flag TCP.
-        Il tuo compito è mimetizzarti nel traffico normale per bypassare i blocchi.
+    Il tuo compito è mimetizzarti nel traffico normale per bypassare i blocchi.
         
         DEVI rispondere ESCLUSIVAMENTE con un oggetto JSON valido in questo formato esatto, senza aggiungere formattazione markdown o altro testo:
         {{
                 "strategy_name": "Nome_Inventato_Da_Te_Per_Questa_Strategia",
-                "target_flags": "I_FLAG_CHE_SUGGERISCI_DI_USARE",
+                "target_flags": "I_FLAG_CHE_SUGGERISCI_DI_USARE (es. S, A, F, P, U)",
                 "reasoning": "Spiega in una frase perché hai scelto questi flag"
             }}
     """
 
     #Invocazione Gemini
     try:
-        model = genai.GenerativeModel('gemini-1.5-flash')
-        response = model.generate_content(prompt)
+        response = client.models.generate_content(
+            model='gemini-3.6-flash',
+            contents=prompt,
+        )
 
         #Pulizia della risposta
         testo_pulito = response.text.replace("```json", "").replace("```", "").strip()
@@ -64,11 +66,11 @@ def get_evasion_strategy(baseline_path="baseline.json", log_path="evasion_log.js
         return strategia
 
     except Exception as e:
-        print(f"[-] Errore di comunicazione con l'IA: {e}")
+        print(f"Errore di comunicazione con l'IA: {e}")
         return None
 
 #Test
-if __name__ == "__main":
+if __name__ == "__main__":
     print("Avvio LLM Evasion Strategy Engine...")
     print("Contatto i server di Google Gemini in corso...\n")
 
@@ -77,6 +79,8 @@ if __name__ == "__main":
     if nuova_strategia:
         print("L'IA ha risposto con successo!")
         print(json.dumps(nuova_strategia, indent=4))
+    else:
+        print("L'IA non ha risposto correttamente. Controlla i log per dettagli.")
         
 
 
