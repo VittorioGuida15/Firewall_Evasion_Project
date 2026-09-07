@@ -1,11 +1,19 @@
 {
-    "avg_packet_size": 168.25,
+
+    "avg_packet_size": 60.5,
+
     "avg_ttl": 64.0,
+
     "tcp_flags_distribution": {
+
+        "A": 45,
+
+        "PA": 40,
+
         "S": 2,
-        "SA": 2,
-        "A": 10,
-        "PA": 6,
-        "FA": 4
+
+        "FA": 13
+
     }
+
 }

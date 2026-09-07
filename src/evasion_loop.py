@@ -2,15 +2,16 @@ import time
 import json
 import os
 from scapy.all import IP, TCP, sr1
-from mutation_engine import mutate_tcp_flags
+from mutation_engine import mutate_tcp_flags, mutate_ip_ttl, mutate_tcp_window_size, mutate_source_port
+from llm_engine_mock import get_mock_llm_mutation
 from successFeedbackAnalyzer import evaluate_response
 
-def log_evasion_attempt(packet_time, score):
+def log_evasion_attempt(packet_type, score):
     """Salva la risposta del firewall e il punteggio del tentativo nel file JSON."""
     #Organizzazione dei dati
     log_entry = {
         "timestamp": time.time(),
-        "packet_type": packet_time, #Etichetta mutazione applicata
+        "packet_type": packet_type, #Etichetta mutazione applicata
         "score": score
     }
 
@@ -44,24 +45,55 @@ def run_evasion_loop():
     score = evaluate_response(response)
     log_evasion_attempt("XMAS_base", score)
 
-    #Evasione
-    if score == -1:
-        print("\n[Fase 2] Il pacchetto è stato bloccato. Applicazione mutazione (Cambio Flag TCP a SYN)...")
-        # Mutiamo il pacchetto togliendo i flag anomali
-        mutated_packet = mutate_tcp_flags(packet, "S")
-        
-        print("Ritento l'invio con il pacchetto mutato...")
-        response2 = sr1(mutated_packet, timeout=3, verbose=0)
-        score2 = evaluate_response(response2)
-        log_evasion_attempt("SYN_mutation", score2)
-        
-        if score2 == 1:
-             print("\n[SUCCESSO] La mutazione ha bypassato il firewall! (Score: +1)")
+    current_score = score
+    current_packet = packet
+
+    #Evasion Loop (max 5 tentativi per PoC)
+    for attempt in range(1,6):
+        if current_score ==1:
+            print(f"\n[SUCCESSO] Bypass del firewall riuscito dopo {attempt-1} mutazioni! Interruzione ciclo.")
+            break
+        print(f"\n[Fase 2 - Tentativo {attempt}] Il pacchetto è stato bloccato. Richiesta mutazione...")
+
+        #Richesta all'LLM di mutare il pacchetto
+        llm_response_json = get_mock_llm_mutation(previous_score=current_score)
+        response = json.loads(llm_response_json)
+
+        print(f"-> Ragionamento LLM: {response['reasoning']}")
+        mutation_details = response['mutation']
+        mutation_type = mutation_details['mutation_type']
+        mutation_value = mutation_details['value']
+
+        print(f"-> Applicazione mutazione: {mutation_type} con valore: {mutation_value}")
+
+        #Applicazione mutazione
+        mutated_packet = current_packet.copy()
+        if mutation_type == "mutate_tcp_flags":
+            mutated_packet = mutate_tcp_flags(mutated_packet, mutation_value)
+        elif mutation_type == "mutate_ip_ttl":
+            mutated_packet = mutate_ip_ttl(mutated_packet, mutation_value)
+        elif mutation_type == "mutate_tcp_window_size":
+            mutated_packet = mutate_tcp_window_size(mutated_packet, mutation_value)
+        elif mutation_type == "mutate_source_port":
+            mutated_packet = mutate_source_port(mutated_packet, mutation_value)
         else:
-             print("\n[FALLIMENTO] Anche la mutazione è stata bloccata. (Score: -1)")
-             
-    elif score == 1:
-        print("\n[ATTENZIONE] Il pacchetto base non è stato bloccato. Controlla le regole del firewall.")
+            print("-> Tipo di mutazione non riconosciuta.")
+
+        #invio pacchetto mutato e valutazione risposta
+        print("-> Invio pacchetto mutato...")
+        response2 = sr1(mutated_packet, timeout=3, verbose=0)
+        current_score = evaluate_response(response2)
+        current_packet = mutated_packet #Aaggiorna il pacchetto corrente per il prossimo tentativo.
+
+        #Scrittura log del tentativo
+        log_packet_type = f"{mutation_type}_{mutation_value}"
+        log_evasion_attempt(log_packet_type, current_score)
+
+        if current_score == -1:
+            print("\n[Fallimento] Il pacchetto mutato è stato bloccato dal firewall.")
+
+    if current_score == -1:
+        print("\n[FINE] Limite di tentativi raggiunto. L'evasione è fallita per questo ciclo.")
 
 
 if __name__ == "__main__":
