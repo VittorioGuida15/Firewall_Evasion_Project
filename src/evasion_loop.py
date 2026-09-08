@@ -50,22 +50,32 @@ def run_evasion_loop():
 
     #Evasion Loop (max 5 tentativi per PoC)
     for attempt in range(1,6):
-        if current_score ==1:
-            print(f"\n[SUCCESSO] Bypass del firewall riuscito dopo {attempt-1} mutazioni! Interruzione ciclo.")
-            break
-        print(f"\n[Fase 2 - Tentativo {attempt}] Il pacchetto è stato bloccato. Richiesta mutazione...")
-
+        
         #Richesta all'LLM di mutare il pacchetto
         llm_response_json = get_mock_llm_mutation(previous_score=current_score)
-        response = json.loads(llm_response_json)
 
-        print(f"-> Ragionamento LLM: {response['reasoning']}")
-        mutation_details = response['mutation']
-        mutation_type = mutation_details['mutation_type']
-        mutation_value = mutation_details['value']
+        #Gestione allucinazioni dell'LLM e parsing della risposta
+        try:
+            response = json.loads(llm_response_json)
+            if "reasoning" not in response or "mutation" not in response:
+                raise ValueError("L'LLM ha restituito un JSON ma mancano le chiavi obbligatorie.")
 
-        print(f"-> Applicazione mutazione: {mutation_type} con valore: {mutation_value}")
+            print(f"-> Ragionamento LLM: {response['reasoning']}")
+            mutation_details = response['mutation']
+            mutation_type = mutation_details['mutation_type']
+            mutation_value = mutation_details['value']
 
+        except json.JSONDecodeError:
+            print("[ERRORE] Allucinazione dell'LLM, non ha restituito un JSON valido. Turno saltato.")
+            time.sleep(2)
+            continue
+
+        except ValueError as e:
+            print(f"-> [ERRORE] Formato AI errato: {e}. Salto il turno.")
+            time.sleep(2)
+            continue
+
+        print(f"Applicazione mutazione: {mutation_type} con valore: {mutation_value}")
         #Applicazione mutazione
         mutated_packet = current_packet.copy()
         if mutation_type == "mutate_tcp_flags":
@@ -86,11 +96,17 @@ def run_evasion_loop():
         current_packet = mutated_packet #Aaggiorna il pacchetto corrente per il prossimo tentativo.
 
         #Scrittura log del tentativo
-        log_packet_type = f"{mutation_type}_{mutation_value}"
+        log_packet_type = f"LLM_Attempt_{attempt}_{mutation_type}_{mutation_value}"
         log_evasion_attempt(log_packet_type, current_score)
 
-        if current_score == -1:
+        if current_score == 1:
+            print(f"\n[SUCCESSO] Bypass del firewall riuscito al tentativo {attempt}! Interruzione ciclo.")
+            break
+        else:
             print("\n[Fallimento] Il pacchetto mutato è stato bloccato dal firewall.")
+            # Rate limiting
+            print("Attesa di 2 secondi prima del prossimo tentativo...")
+            time.sleep(2)
 
     if current_score == -1:
         print("\n[FINE] Limite di tentativi raggiunto. L'evasione è fallita per questo ciclo.")
