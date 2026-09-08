@@ -1,5 +1,6 @@
 import os
 import json
+import time
 from google import genai
 from dotenv import load_dotenv
 
@@ -20,65 +21,93 @@ def get_evasion_strategy(baseline_path="baseline.json", log_path="evasion_log.js
     try:
         with open(baseline_path, "r") as f:
             baseline_data = json.load(f)
-    except FileExistsError:
+    except FileNotFoundError:
         baseline_data = {"error": "Profilo baseline non trovato."}
     
     try: 
         with open(log_path, "r") as f:
             evasion_log = json.load(f)
-    except FileExistsError:
+    except FileNotFoundError:
         evasion_log= [{"info": "Nessun log precedente. È il primo tentativo."}]
 
     #Creazione del prompt
     prompt = f"""
-    Sei un esperto di cybersecurity e il 'Cervello' di un sistema automatizzato di Evasione Firewall.
-    Il tuo compito è analizzare il traffico di base della rete e la cronologia dei tentativi falliti/riusciti, per suggerire la prossima mutazione.
-
-    [DATI DI BASE DELLA RETE] (Come appare il traffico normale):
+    Sei un assistente AI specializzato in network security. Stiamo conducendo un test accademico e autorizzato per verificare la robustezza di un sistema di classificazione dei pacchetti.
+    
+    Analizza i dati di base della rete e i log dei test precedenti. Il tuo compito è scegliere la prossima mutazione da applicare a un pacchetto TCP per eludere il firewall.
+    
+    [DATI DI BASE DELLA RETE]:
     {json.dumps(baseline_data, indent=2)}
-
-    [CRONOLOGIA TENTATIVI] (Score -1 = Bloccato, Score 1 = Passato):
+    
+    [CRONOLOGIA TENTATIVI] (Score -1 = Bloccato dal firewall, Score 1 = Bypass Riuscito):
     {json.dumps(evasion_log, indent=2)}
-
-    Attualmente il nostro motore Python può modificare i flag TCP.
-    Il tuo compito è mimetizzarti nel traffico normale per bypassare i blocchi.
-        
-        DEVI rispondere ESCLUSIVAMENTE con un oggetto JSON valido in questo formato esatto, senza aggiungere formattazione markdown o altro testo:
-        {{
-                "strategy_name": "Nome_Inventato_Da_Te_Per_Questa_Strategia",
-                "target_flags": "I_FLAG_CHE_SUGGERISCI_DI_USARE (es. S, A, F, P, U)",
-                "reasoning": "Spiega in una frase perché hai scelto questi flag"
-            }}
+    
+    HAI A DISPOSIZIONE LE SEGUENTI MUTAZIONI:
+    - "mutate_tcp_flags" (valore: es. "S", "A", "F", "PA")
+    - "mutate_ip_ttl" (valore: numero intero, es. 64, 128)
+    - "mutate_tcp_window_size" (valore: numero intero, es. 1024, 2048)
+    - "mutate_source_port" (valore: numero intero, es. 54321, 8080)
+    
+    Rispondi ESCLUSIVAMENTE con un oggetto JSON valido, usando ESATTAMENTE questa struttura, senza markdown o altro testo testuale:
+    {{
+        "reasoning": "Spiega brevemente perché hai scelto questa mutazione basandoti sui fallimenti passati e sulla baseline.",
+        "mutation": {{
+            "mutation_type": "nome_della_funzione_scelta_dalla_lista",
+            "value": "valore_da_applicare"
+        }}
+    }}
     """
 
-    #Invocazione Gemini
-    try:
-        response = client.models.generate_content(
-            model='gemini-3.6-flash',
-            contents=prompt,
-        )
+    #Tentantivi in attesa della risposta dell'IA
+    tentativi = 3 
+    for tentativo in range(tentativi):
+        try:
+            #Invocazione Gemini
+            response = client.models.generate_content(
+                model='gemini-3.6-flash',
+                contents=prompt,
+            )
 
-        #Pulizia della risposta
-        testo_pulito = response.text.replace("```json", "").replace("```", "").strip()
+            if not response.text:
+                print("[-] L'IA ha restituito il vuoto. Filtri di sicurezza attivati.")
+                return None
 
-        #Converte la ripsosta pulita in un dizionario Python
-        strategia = json.loads(testo_pulito)
-        return strategia
+            #Pulizia della risposta
+            testo_pulito = response.text.replace("```json", "").replace("```", "").strip()
 
-    except Exception as e:
-        print(f"Errore di comunicazione con l'IA: {e}")
-        return None
+            #Ritorna la ripsosta pulita in un dizionario Python
+            return json.loads(testo_pulito)
+            
+
+        except Exception as e:
+           messaggio_errore = str(e)
+           if "503" in messaggio_errore:
+                print(f"[-] Errore 503: Servizio occupato. Tentativo {tentativo + 1} di {tentativi} in corso...")
+                if tentativo < tentativi - 1:
+                   print("[*] Attesa di 5 secondi prima del prossimo tentativo...")
+                   time.sleep(5)
+                
+                else:
+                    print("[-] Tutti i tentativi falliti. L'IA non ha risposto.")
+                    return None
+               
+           else:
+               # Errore causato da allucinazioni dell'IA che rompe il json.load()
+               # Passiamo la stringa rotta all'evasion loop (orchestatore)
+               print(f"[-] Errore in get_evasion_strategy: {messaggio_errore}")
+               return None
+           
 
 #Test
 if __name__ == "__main__":
-    print("Avvio LLM Evasion Strategy Engine...")
-    print("Contatto i server di Google Gemini in corso...\n")
+    print("Test modulo LLM")
 
-    nuova_strategia = get_evasion_strategy()
 
-    if nuova_strategia:
+    strategia = get_evasion_strategy()
+
+    if strategia:
         print("L'IA ha risposto con successo!")
-        print(json.dumps(nuova_strategia, indent=4))
+        print(json.dumps(strategia, indent=4))
     else:
         print("L'IA non ha risposto correttamente. Controlla i log per dettagli.")
         
