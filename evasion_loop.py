@@ -54,12 +54,28 @@ def run_evasion_loop():
 
         # 1. Chiediamo al Mock LLM come mutare il pacchetto, passandogli il feedback precedente
         mock_llm_response_json = llm_engine.get_mock_llm_mutation(previous_score=current_score)
-        mock_response = json.loads(mock_llm_response_json)
 
-        print(f"-> Ragionamento LLM simulato: {mock_response['reasoning']}")
-        mutation_details = mock_response['mutation']
-        mutation_type = mutation_details['mutation_type']
-        mutation_value = mutation_details['value']
+        # GESTIONE ALLUCINAZIONI: Blocco try-except per la decodifica sicura del JSON
+        try:
+            mock_response = json.loads(mock_llm_response_json)
+
+            # Verifica preventiva della struttura per evitare crash (KeyError) se l'AI "dimentica" un pezzo
+            if "reasoning" not in mock_response or "mutation" not in mock_response:
+                raise ValueError("L'LLM ha restituito un JSON ma mancano le chiavi obbligatorie.")
+
+            print(f"-> Ragionamento LLM simulato: {mock_response['reasoning']}")
+            mutation_details = mock_response['mutation']
+            mutation_type = mutation_details['mutation_type']
+            mutation_value = mutation_details['value']
+
+        except json.JSONDecodeError:
+            print("-> [ERRORE] L'LLM ha allucinato e non ha restituito un JSON valido. Salto il turno.")
+            time.sleep(2)
+            continue # Passa direttamente al prossimo tentativo
+        except ValueError as e:
+            print(f"-> [ERRORE] Formato AI errato: {e}. Salto il turno.")
+            time.sleep(2)
+            continue
 
         print(f"-> Applicazione mutazione: {mutation_type} con valore: {mutation_value}")
 
@@ -88,6 +104,10 @@ def run_evasion_loop():
 
         if current_score == -1:
              print("-> [FALLIMENTO] Anche questo pacchetto mutato è stato bloccato.")
+
+        # RATE LIMITING: Pausa per evitare di superare i limiti API (es. 15 richieste/minuto)
+        print("-> [RATE LIMITING] In attesa di 2 secondi prima della prossima chiamata API...\n")
+        time.sleep(2)
 
     if current_score == -1:
         print("\n[FINE] Limite di tentativi raggiunto. L'evasione è fallita per questo ciclo.")
