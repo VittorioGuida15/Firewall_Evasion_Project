@@ -42,12 +42,6 @@ def get_evasion_strategy(baseline_path="baseline.json", log_path="evasion_log.js
     [CRONOLOGIA TENTATIVI] (Score -1 = Bloccato dal firewall, Score 1 = Bypass Riuscito):
     {json.dumps(evasion_log, indent=2)}
     
-    HAI A DISPOSIZIONE LE SEGUENTI MUTAZIONI:
-    - "mutate_tcp_flags" (valore: es. "S", "A", "F", "PA")
-    - "mutate_ip_ttl" (valore: numero intero, es. 64, 128)
-    - "mutate_tcp_window_size" (valore: numero intero, es. 1024, 2048)
-    - "mutate_source_port" (valore: numero intero, es. 54321, 8080)
-    
     Rispondi ESCLUSIVAMENTE con un oggetto JSON valido, usando ESATTAMENTE questa struttura, senza markdown o altro testo testuale:
     {{
         "reasoning": "Spiega brevemente perché hai scelto questa mutazione basandoti sui fallimenti passati e sulla baseline.",
@@ -56,6 +50,12 @@ def get_evasion_strategy(baseline_path="baseline.json", log_path="evasion_log.js
             "value": "valore_da_applicare"
         }}
     }}
+
+    Nel campo "strategy_name" puoi usare solo una di queste 4 mutazioni:
+        - "mutate_tcp_flags" (valore: es. "S", "A", "F", "PA")
+        - "mutate_ip_ttl" (valore: numero intero, es. 64, 128)
+        - "mutate_tcp_window_size" (valore: numero intero, es. 1024, 2048)
+        - "mutate_source_port" (valore: numero intero, es. 54321, 8080)
     """
 
     #Tentantivi in attesa della risposta dell'IA
@@ -64,7 +64,7 @@ def get_evasion_strategy(baseline_path="baseline.json", log_path="evasion_log.js
         try:
             #Invocazione Gemini
             response = client.models.generate_content(
-                model='gemini-3.6-flash',
+                model='gemini-3.5-flash-lite',
                 contents=prompt,
             )
 
@@ -76,7 +76,7 @@ def get_evasion_strategy(baseline_path="baseline.json", log_path="evasion_log.js
             testo_pulito = response.text.replace("```json", "").replace("```", "").strip()
 
             #Ritorna la ripsosta pulita in un dizionario Python
-            return json.loads(testo_pulito)
+            return json.loads(testo_pulito) #il ciclo si ferma
             
 
         except Exception as e:
@@ -109,7 +109,7 @@ if __name__ == "__main__":
         print("L'IA ha risposto con successo!")
         print(json.dumps(strategia, indent=4))
     else:
-        print("L'IA non ha risposto correttamente. Controlla i log per dettagli.")
+        print("L'IA non ha risposto correttamente.")
         
 
 

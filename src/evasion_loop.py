@@ -4,6 +4,7 @@ import os
 from scapy.all import IP, TCP, sr1
 from mutation_engine import mutate_tcp_flags, mutate_ip_ttl, mutate_tcp_window_size, mutate_source_port
 from llm_engine_mock import get_mock_llm_mutation
+from llm_engine import get_evasion_strategy
 from successFeedbackAnalyzer import evaluate_response
 
 def log_evasion_attempt(packet_type, score):
@@ -36,27 +37,26 @@ def run_evasion_loop():
     #pacchetto anomalo XMAS
     ip_layer = IP(dst="target_server")
     tcp_layer = TCP(dport=80, flags="FPU")
-    packet = ip_layer / tcp_layer
+    current_packet = ip_layer / tcp_layer
 
     print("Invio pacchetto anomalo (XMAS) senza mutazioni")
-    response = sr1(packet, timeout=3, verbose=0) #verbose = 0: lavora in background
+    response = sr1(current_packet, timeout=3, verbose=0) #verbose = 0: lavora in background
 
     #Valutazione risposte
-    score = evaluate_response(response)
-    log_evasion_attempt("XMAS_base", score)
-
-    current_score = score
-    current_packet = packet
+    current_score = evaluate_response(response)
+    log_evasion_attempt("XMAS_base", current_score)
 
     #Evasion Loop (max 5 tentativi per PoC)
     for attempt in range(1,6):
         
         #Richesta all'LLM di mutare il pacchetto
-        llm_response_json = get_mock_llm_mutation(previous_score=current_score)
+        # Esecuzione con mock o senza mock
+        #llm_response_json = get_mock_llm_mutation(previous_score=current_score) 
+        llm_response_json = get_evasion_strategy()
 
         #Gestione allucinazioni dell'LLM e parsing della risposta
         try:
-            response = json.loads(llm_response_json)
+            response = llm_response_json
             if "reasoning" not in response or "mutation" not in response:
                 raise ValueError("L'LLM ha restituito un JSON ma mancano le chiavi obbligatorie.")
 

@@ -24,4 +24,4 @@ def get_mock_llm_mutation(previous_score=None, previous_mutation=None):
         "mutation": selected_mutation
     }
 
-    return json.dumps(response)
+    return response
