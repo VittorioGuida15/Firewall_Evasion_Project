@@ -46,8 +46,8 @@ def run_evasion_loop():
     current_score = evaluate_response(response)
     log_evasion_attempt("XMAS_base", current_score)
 
-    #Evasion Loop (max 5 tentativi per PoC)
-    for attempt in range(1,6):
+    #Evasion Loop (max tentativi)
+    for attempt in range(1,10):
         
         #Richesta all'LLM di mutare il pacchetto
         # Esecuzione con mock o senza mock

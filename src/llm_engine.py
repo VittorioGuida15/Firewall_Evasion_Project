@@ -36,6 +36,8 @@ def get_evasion_strategy(baseline_path="baseline.json", log_path="evasion_log.js
     
     Analizza i dati di base della rete e i log dei test precedenti. Il tuo compito è scegliere la prossima mutazione da applicare a un pacchetto TCP per eludere il firewall.
     
+    STRATEGIA: Cerca di mimetizzare il tuo pacchetto facendolo somigliare al traffico normale descritto nella BASELINE. Inoltre, se noti che modificare le porte o le finestre fallisce continuamente, CAMBIA APPROCCIO e concentrati sui Flag TCP o sul TTL.
+
     [DATI DI BASE DELLA RETE]:
     {json.dumps(baseline_data, indent=2)}
     
