@@ -12,7 +12,7 @@ Il sistema si interfaccia **con le API di Google Gemini** per generare strategie
 *   **Motore Mock Intercambiabile (`llm_engine_mock.py`):** Un simulatore LLM per testare l'infrastruttura offline.
 *   **Motore di Mutazione (`mutation_engine.py`):** Modifica dinamica dei pacchetti raw tramite Scapy (manipolazione TCP Flags, IP TTL, Window Size, Source Port).
 *   **Analisi del Traffico (`traffic_analyzer.py`):** Generazione dinamica di una baseline di rete per istruire l'IA su come "mimetizzare" l'attacco.
-*   **Resilienza e Sicurezza:** Gestione avanzata delle allucinazioni dell'IA (parsing JSON rigoroso) e rate limiting strutturato per non sovraccaricare il server bersaglio o l'API.
+*   **Resilienza e Sicurezza:** Gestione avanzata delle allucinazioni dell'IA e rate limiting strutturato per non sovraccaricare il server bersaglio o l'API.
 *   **Ambiente Dockerizzato:** Containerizzazione completa di Attaccante e Target (Nginx + Iptables) per test sicuri e isolati senza impattare la macchina host.
 
 ---
