@@ -121,7 +121,7 @@ python src/evasion_loop.py
 
 ## 🧠 Flusso di esecuzione (Architettura)
 
-0. **Fase 0 (Profilazione del Traffico):** Prima di un attacco, l'IA ha bisogno di conoscere le abitudini della rete per potersi mimetizzare. Nel setup abbiamo copiato una `baseline.json` già pronta. Tuttavia, per un test 100% realistico, puoi avviare lo sniffer `src/traffic_analyzer.py` e, in un altro terminale, generare traffico legittimo verso il server (ad esempio inviando il comando `curl http://target_server` ripetutamente) per creare una Baseline dinamica dal vivo.
+0. **Fase 0 (Profilazione del Traffico):** Prima di un attacco, l'IA ha bisogno di conoscere le abitudini della rete per potersi mimetizzare. Nel setup abbiamo copiato una `baseline.json` già pronta. Tuttavia, per un test 100% realistico, puoi avviare lo sniffer `src/traffic_analyzer.py`, in un altro terminale, per generare traffico legittimo verso il server (ad esempio inviando il comando `curl http://target_server` ripetutamente) per creare una Baseline dinamica dal vivo.
 1. **Fase Iniziale (Paziente Zero):** L'orchestratore genera un pacchetto raw palesemente anomalo (es. TCP XMAS) e lo invia al `target_server`.
 2. **Valutazione del Firewall:** Iptables sul server bersaglio analizza il pacchetto, lo scarta in modo silente (DROP) e l'orchestratore registra il fallimento.
 3. **Analisi Logica (AI Agent):** L'orchestratore interroga `llm_engine.py` (o il Mock). L'IA incrocia i dati della *Baseline* con la cronologia dei fallimenti passati (`evasion_log.json`), deducendo la mutazione più logica da applicare. L'output è un JSON rigoroso contenente il "ragionamento" e le istruzioni di attacco.
