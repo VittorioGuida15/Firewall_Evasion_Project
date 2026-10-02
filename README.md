@@ -48,6 +48,7 @@ Firewall_Evasion_Project/
 │
 ├── .gitignore                  → File e cartelle ignorate da Git
 ├── .env.example                → Template per le variabili d'ambiente necessarie
+├── AI-Driven Firewall Evasion_VittorioGuida.pdf → Documentazione e sperimentazione del progetto
 ├── Project_draft_9.1.pdf       → Documentazione accademica del progetto
 ├── README.md                   → Documentazione del repository (questo file)
 ├── baseline_example.json       → Template del traffico normale (Quick Start)
