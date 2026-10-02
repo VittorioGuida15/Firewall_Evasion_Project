@@ -12,7 +12,7 @@ Il sistema si interfaccia **con le API di Google Gemini** per generare strategie
 *   **Motore Mock Intercambiabile (`llm_engine_mock.py`):** Un simulatore LLM per testare l'infrastruttura offline.
 *   **Motore di Mutazione (`mutation_engine.py`):** Modifica dinamica dei pacchetti raw tramite Scapy (manipolazione TCP Flags, IP TTL, Window Size, Source Port).
 *   **Analisi del Traffico (`traffic_analyzer.py`):** Generazione dinamica di una baseline di rete per istruire l'IA su come "mimetizzare" l'attacco.
-*   **Resilienza e Sicurezza:** Gestione avanzata delle allucinazioni dell'IA (parsing JSON rigoroso) e rate limiting strutturato per non sovraccaricare il server bersaglio o l'API.
+*   **Resilienza e Sicurezza:** Gestione avanzata delle allucinazioni dell'IA e rate limiting strutturato per non sovraccaricare il server bersaglio o l'API.
 *   **Ambiente Dockerizzato:** Containerizzazione completa di Attaccante e Target (Nginx + Iptables) per test sicuri e isolati senza impattare la macchina host.
 
 ---
@@ -121,7 +121,7 @@ python src/evasion_loop.py
 
 ## 🧠 Flusso di esecuzione (Architettura)
 
-0. **Fase 0 (Profilazione del Traffico):** Prima di un attacco, l'IA ha bisogno di conoscere le abitudini della rete per potersi mimetizzare. Nel setup abbiamo copiato una `baseline.json` già pronta. Tuttavia, per un test 100% realistico, puoi avviare lo sniffer `src/traffic_analyzer.py` e, in un altro terminale, generare traffico legittimo verso il server (ad esempio inviando il comando `curl http://target_server` ripetutamente) per creare una Baseline dinamica dal vivo.
+0. **Fase 0 (Profilazione del Traffico):** Prima di un attacco, l'IA ha bisogno di conoscere le abitudini della rete per potersi mimetizzare. Nel setup abbiamo copiato una `baseline.json` già pronta. Tuttavia, per un test 100% realistico, puoi avviare lo sniffer `src/traffic_analyzer.py`, in un altro terminale, per generare traffico legittimo verso il server (ad esempio inviando il comando `curl http://target_server` ripetutamente) per creare una Baseline dinamica dal vivo.
 1. **Fase Iniziale (Paziente Zero):** L'orchestratore genera un pacchetto raw palesemente anomalo (es. TCP XMAS) e lo invia al `target_server`.
 2. **Valutazione del Firewall:** Iptables sul server bersaglio analizza il pacchetto, lo scarta in modo silente (DROP) e l'orchestratore registra il fallimento.
 3. **Analisi Logica (AI Agent):** L'orchestratore interroga `llm_engine.py` (o il Mock). L'IA incrocia i dati della *Baseline* con la cronologia dei fallimenti passati (`evasion_log.json`), deducendo la mutazione più logica da applicare. L'output è un JSON rigoroso contenente il "ragionamento" e le istruzioni di attacco.
